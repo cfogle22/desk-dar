@@ -1,2 +1,3 @@
 # desk-dar
-mini-flight radar for your desk
+
+Mini flight radar for your desk powered by esp 
