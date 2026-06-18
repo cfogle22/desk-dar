@@ -1,26 +1,67 @@
 #ifndef DISPLAY_MANAGER
+#define DISPLAY_MANAGER
 
 #include <Arduino.h>
 #include <Adafruit_GC9A01A.h>
 #include <Adafruit_GFX.h>
 #include <SPI.h>
 
-#define TFT_CS   5
-#define TFT_DC   27
-#define TFT_RST  33
 #define CENTER_Y 120
 #define CENTER_X 120
-
+#define RADAR_LINES 4
+#define MAX_X 240
+#define MAX_Y 240
+#define RADIUS 120
 class DisplayManager {
 
-    //default to adafruit limits
-    uint16_t MAX_X = 240;
-    uint16_t MAX_Y = 240;
+Adafruit_GC9A01A*   tft;
 
-    DisplayManager(uint16_t max_x, uint16_t max_y) {
+int TFT_CS;
+int TFT_DC;  
+int TFT_RST;
 
-    }
-    ~DisplayManager(){}
+    public:
+
+DisplayManager  
+                ( 
+                int         tft_cs,
+                int         tft_dc,
+                int         tft_rst
+                );
+
+~DisplayManager();
+
+void begin();
+
+void initializing_display
+                        (
+
+                        );
+
+void do_radar_screen
+                    (
+                    int         radius,
+                    uint16_t    color
+                    );
+
+void cls            (
+
+                    )
+{
+
+tft->fillScreen(GC9A01A_BLACK);
+
+}
+
+    private:
+
+int     prev_angle              = 0;
+int     prev_radius             = 0;
+int     prev_x                  = 0;
+int     prev_y                  = 0;
+
+char    loading_states[8]       = {'|'  , '/' , '-' , '\\'};
+int     loading_state_index     = 0;
 
 };
 
