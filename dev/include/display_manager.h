@@ -23,22 +23,27 @@ int TFT_RST;
     public:
 
 DisplayManager  
-                ( 
-                int         tft_cs,
-                int         tft_dc,
-                int         tft_rst
-                );
+                    ( 
+                    int         tft_cs,
+                    int         tft_dc,
+                    int         tft_rst
+                    );
 
 ~DisplayManager();
 
 void begin();
 
 void initializing_display
-                        (
+                    (
 
-                        );
+                    );
 
-void do_radar_screen
+void print
+                    (
+                        const char* text
+                    );
+
+float do_radar_screen
                     (
                     int         radius,
                     uint16_t    color
@@ -53,10 +58,12 @@ tft->fillScreen(GC9A01A_BLACK);
 
 }
 
+static DisplayManager* getInstance();
+
+static DisplayManager* instance;
+
     private:
 
-int     prev_angle              = 0;
-int     prev_radius             = 0;
 int     prev_x                  = 0;
 int     prev_y                  = 0;
 

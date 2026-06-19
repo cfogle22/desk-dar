@@ -1,5 +1,17 @@
 #include "display_manager.h"
 
+// define static instance
+DisplayManager* DisplayManager::instance = nullptr;
+
+DisplayManager* DisplayManager::getInstance(
+
+                                           )
+{
+
+return DisplayManager::instance;
+
+}
+
 DisplayManager::DisplayManager
                         (
                         int         tft_cs,
@@ -8,10 +20,12 @@ DisplayManager::DisplayManager
                         )
 {
 
- TFT_CS = tft_cs;
- TFT_DC = tft_dc;
- TFT_RST = tft_rst;
- tft = new Adafruit_GC9A01A(TFT_CS, TFT_DC, TFT_RST);
+TFT_CS = tft_cs;
+TFT_DC = tft_dc;
+TFT_RST = tft_rst;
+tft = new Adafruit_GC9A01A(TFT_CS, TFT_DC, TFT_RST);
+
+DisplayManager::instance = this;
 
 }
 
@@ -25,6 +39,8 @@ tft->setTextColor(GC9A01A_WHITE);
 tft->setTextSize(2);
 tft->print("Shutting down");
 delay(1000);
+// clear singleton instance before destroying
+DisplayManager::instance = nullptr;
 delete tft;
 }
 
@@ -61,7 +77,7 @@ tft->print(loading_states[loading_state_index]);
 loading_state_index = (loading_state_index + 1) % 4;
 }
 
-void DisplayManager::do_radar_screen
+float DisplayManager::do_radar_screen
                     (
                     int         radius,
                     uint16_t    color
@@ -85,10 +101,20 @@ for( int i = ( radius/RADAR_LINES ) ; i <= radius; i += ( radius/RADAR_LINES ) )
   tft->drawCircle(CENTER_X,CENTER_Y,i-1, color);
 }
 
-prev_angle = deg;
-prev_radius = radius;
 prev_x = x;
 prev_y = y;
 
+return deg;
+
 }
 
+void DisplayManager::print
+                    (
+                        const char* text
+                    )
+{
+
+tft->setTextColor(GC9A01A_WHITE);
+tft->print(text);
+
+}
