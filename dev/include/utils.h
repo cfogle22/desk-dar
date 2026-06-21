@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+#define DEBUG(X) Serial.println(X)
+
 String serial_read_string() {
   String input = "";
 

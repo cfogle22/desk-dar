@@ -6,17 +6,15 @@
 #include "display_manager.h"
 #include "network_manager.h"
 #include "utils.h"
-#include <HTTPClient.h>
-#include <ArduinoJson.h>
 
 #define TFT_CS   5
 #define TFT_DC   27
 #define TFT_RST  33
 
+
 #define DEBUG(X) Serial.println(X)
 DisplayManager display_manager(TFT_CS, TFT_DC, TFT_RST);
 NetworkManager network_manager;
-HTTPClient http_client;
 
 void setup() {
 
@@ -73,18 +71,20 @@ delay(100);
 
 display_manager.cls();
 
-DEBUG("fetching ATSB api");
+
+
+DEBUG("fetching ADS-B api");
 http_client.begin(network_manager.get_client(), "https://opensky-network.org/api/states/all?lamin=38.8&lomin=-95.0&lamax=39.2&lomax=-94.4");
 int code = http_client.GET();
 if(code!=200)
 {
-  DEBUG("Failed to fetch data from ATSB API");
+  DEBUG("Failed to fetch data from ADS-B API");
   Serial.printf("HTTP error code: %d\n", code);
-  display_manager.print("Failed to fetch data from ATSB API");
+  display_manager.print("Failed to fetch data from ADS-B API");
   while(true);
 }
 
-DEBUG("Data fetched successfully from ATSB API");
+DEBUG("Data fetched successfully from ADS-B API");
 String payload = http_client.getString();
 StaticJsonDocument<16000> doc;
     DeserializationError err = deserializeJson(doc, payload);
