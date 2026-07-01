@@ -88,18 +88,22 @@ int deg = millis() / 10 % 360;
 
 float angle_rad = deg * DEG_TO_RAD;
 
-int x = CENTER_X + radius * cos(angle_rad);
-int y = CENTER_Y + radius * sin(angle_rad);
+int effective_radius = radius - LABEL_MARGIN;
+
+int x = CENTER_X + effective_radius * cos(angle_rad);
+int y = CENTER_Y + effective_radius * sin(angle_rad);
 
 tft->drawLine(CENTER_X, CENTER_Y, x, y, color);
 tft->drawLine(CENTER_X, CENTER_Y, prev_x, prev_y, GC9A01A_BLACK);
 
 tft->setCursor(CENTER_X,CENTER_Y);
-for( int i = ( radius/RADAR_LINES ) ; i <= radius; i += ( radius/RADAR_LINES ) ) 
+for( int i = ( effective_radius/RADAR_LINES ) ; i <= effective_radius; i += ( effective_radius/RADAR_LINES ) ) 
 {
   //Draw radar circles everytime
   tft->drawCircle(CENTER_X,CENTER_Y,i-1, color);
 }
+
+draw_orientation_labels();
 
 prev_x = x;
 prev_y = y;
@@ -117,4 +121,51 @@ void DisplayManager::print
 tft->setTextColor(GC9A01A_WHITE);
 tft->print(text);
 
+}
+
+void DisplayManager::draw_pixel
+          (
+          int         x,
+          int         y,
+          uint16_t    color
+          )
+{
+tft->drawPixel(x, y, color);
+}
+
+void DisplayManager::draw_orientation_labels()
+{
+  auto bearingToLabel = [](int deg)->char {
+    deg = ((deg % 360) + 360) % 360;
+    if (deg >= 315 || deg < 45) return 'N';
+    if (deg >= 45 && deg < 135) return 'E';
+    if (deg >= 135 && deg < 225) return 'S';
+    return 'W';
+  };
+
+  char top = bearingToLabel(orientation);
+  char right = bearingToLabel(orientation + 90);
+  char bottom = bearingToLabel(orientation + 180);
+  char left = bearingToLabel(orientation + 270);
+
+  // clear small areas where labels will be drawn
+  tft->fillRect(CENTER_X-8, 0, 16, LABEL_MARGIN+1, GC9A01A_BLACK); // top
+  tft->fillRect(CENTER_X-8, MAX_Y-(LABEL_MARGIN+1), 16, LABEL_MARGIN+1, GC9A01A_BLACK); // bottom
+  tft->fillRect(0, CENTER_Y-8, LABEL_MARGIN+1, 16, GC9A01A_BLACK); // left
+  tft->fillRect(MAX_X-(LABEL_MARGIN+1), CENTER_Y-8, LABEL_MARGIN+1, 16, GC9A01A_BLACK); // right
+
+  tft->setTextSize(1);
+  tft->setTextColor(GC9A01A_WHITE);
+
+  tft->setCursor(CENTER_X-6, 2);
+  tft->print(top);
+
+  tft->setCursor(CENTER_X-6, MAX_Y-16);
+  tft->print(bottom);
+
+  tft->setCursor(2, CENTER_Y-6);
+  tft->print(left);
+
+  tft->setCursor(MAX_X-14, CENTER_Y-6);
+  tft->print(right);
 }

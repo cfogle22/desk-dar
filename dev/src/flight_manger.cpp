@@ -1,6 +1,11 @@
 #include "flight_manger.h"
 #include "utils.h"
 
+float center_lat = 38.9138863;
+float center_lon = -94.7957893;
+float RADIUS_MILES = 20.0;
+float RADIUS_KM = RADIUS_MILES * 1.60934;
+
 FlightManager::FlightManager() 
 {
 http_client = new HTTPClient();
@@ -8,6 +13,7 @@ http_client = new HTTPClient();
 
 FlightManager::~FlightManager() 
 {
+http_client->end();
 delete http_client;
 }
 
@@ -18,7 +24,7 @@ void FlightManager::update_flights(WiFiClientSecure& wifi_client, float center_l
 
     // Fetch new flight data from the API
     String payload = fetch_flight_data(wifi_client, center_lat, center_lon, radius_km);
-    StaticJsonDocument<16000> doc;
+    JsonDocument doc;
     DeserializationError err = deserializeJson(doc, payload);
     if (err)
     {
@@ -60,9 +66,31 @@ int code = http_client->GET();
 if(code!=200)
 {
   DEBUG("Failed to fetch data from ADS-B API");
+  DEBUG("HTTP code: " + String(code));
   while(true);
 }
 
 return http_client->getString();
 
+}
+
+std::list<Flight> FlightManager::get_flights()
+{
+
+return flights;
+
+}
+
+void FlightMapper::map_flights()
+{
+    std::list<Flight> flights = flight_manager->get_flights();
+    display_manager->cls();
+    for (Flight flight : flights)
+    {
+        float x = (flight.longitude - center_lon) * 111; // Approximate conversion to km
+        float y = (flight.latitude - center_lat) * 111; // Approximate conversion to km
+        int screen_x = (int)(x / RADIUS_KM * 120 + 120); // Map to screen coordinates
+        int screen_y = (int)(y / RADIUS_KM * 120 + 120); // Map to screen coordinates
+        display_manager->draw_pixel(screen_x, screen_y, GC9A01A_WHITE);
+    }
 }

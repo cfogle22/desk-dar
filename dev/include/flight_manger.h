@@ -11,11 +11,10 @@
 #include "display_manager.h"
 #include <list>
 
-float center_lat = 39.0;
-float center_lon = -94.7;
-
-float radius_miles = 100.0;
-float radius_km = radius_miles * 1.60934;
+extern float center_lat;
+extern float center_lon;
+extern float RADIUS_MILES;
+extern float RADIUS_KM;
 
 typedef struct {
     char callsign[9];
@@ -38,6 +37,8 @@ void update_flights(WiFiClientSecure& wifi_client, float center_lat, float cente
 
 String fetch_flight_data(WiFiClientSecure& wifi_client, float center_lat, float center_lon, float radius_km);
 
+std::list<Flight> get_flights();
+
     private:
 void calculate_bounding_box(float center_lat, float center_lon, float radius_km, float& min_lat, float& max_lat, float& min_lon, float& max_lon) 
 {
@@ -58,8 +59,17 @@ max_lon = center_lon + (angular_distance * RAD_TO_DEG / cos(lat_rad));
 class FlightMapper
 {
 
+DisplayManager* display_manager;
+FlightManager* flight_manager;
+
 public:
 
+void map_flights();
+
+FlightMapper(DisplayManager* display_manager, FlightManager* flight_manager) : display_manager(display_manager), flight_manager(flight_manager) {}
+~FlightMapper() {display_manager = nullptr; flight_manager = nullptr;}
+
+private:
 
 
 };

@@ -5,7 +5,7 @@
 
 #define DEBUG(X) Serial.println(X)
 
-String serial_read_string() {
+inline String serial_read_string() {
   String input = "";
 
   // Read characters until Enter is pressed (CR or LF)

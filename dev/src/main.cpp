@@ -5,6 +5,7 @@
 #include <math.h>
 #include "display_manager.h"
 #include "network_manager.h"
+#include "flight_manger.h"
 #include "utils.h"
 
 #define TFT_CS   5
@@ -15,6 +16,8 @@
 #define DEBUG(X) Serial.println(X)
 DisplayManager display_manager(TFT_CS, TFT_DC, TFT_RST);
 NetworkManager network_manager;
+FlightManager flight_manager;
+FlightMapper flight_mapper(&display_manager, &flight_manager);
 
 void setup() {
 
@@ -71,52 +74,22 @@ delay(100);
 
 display_manager.cls();
 
-
-
-DEBUG("fetching ADS-B api");
-http_client.begin(network_manager.get_client(), "https://opensky-network.org/api/states/all?lamin=38.8&lomin=-95.0&lamax=39.2&lomax=-94.4");
-int code = http_client.GET();
-if(code!=200)
-{
-  DEBUG("Failed to fetch data from ADS-B API");
-  Serial.printf("HTTP error code: %d\n", code);
-  display_manager.print("Failed to fetch data from ADS-B API");
-  while(true);
-}
-
-DEBUG("Data fetched successfully from ADS-B API");
-String payload = http_client.getString();
-StaticJsonDocument<16000> doc;
-    DeserializationError err = deserializeJson(doc, payload);
-
-    if (err)
-    {
-        Serial.println("JSON parse failed");
-        return;
-    }
-
-    JsonArray states = doc["states"];
-
-    Serial.printf("Planes found: %d\n", states.size());
-
-    for (JsonArray plane : states)
-    {
-        const char* callsign = plane[1];
-        float planeLat = plane[6];
-        float planeLon = plane[5];
-
-        Serial.print("Callsign: ");
-        Serial.print(callsign ? callsign : "UNKNOWN");
-        Serial.print(" | Lat: ");
-        Serial.print(planeLat, 4);
-        Serial.print(" | Lon: ");
-        Serial.println(planeLon, 4);
-    }
-
-    http_client.end();
 }
 
 void loop() {
-  DEBUG(".");
-  display_manager.do_radar_screen(RADIUS, GC9A01A_GREEN);
+display_manager.do_radar_screen(RADIUS, GC9A01A_GREEN);
+flight_manager.update_flights(network_manager.get_client(), center_lat, center_lon, RADIUS_KM);
+for( Flight flight : flight_manager.get_flights())
+{
+  DEBUG("---------------------------------------------------");
+  String callsign = "Callsign: " + String(flight.callsign);
+  String lat_str = "Latitude: " + String(flight.latitude,4);
+  String lon_str = "Longitude: " + String(flight.longitude, 4);
+  DEBUG(callsign);
+  DEBUG(lat_str);
+  DEBUG(lon_str);
+  DEBUG("---------------------------------------------------");
+  flight_mapper.map_flights();
+}
+delay(10000);
 }
