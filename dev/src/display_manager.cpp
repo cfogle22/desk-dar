@@ -52,6 +52,7 @@ void DisplayManager::begin
 SPI.begin();
 tft->begin();
 tft->setRotation(0);
+draw_orientation_labels();
 
 }
 
@@ -90,11 +91,11 @@ float angle_rad = deg * DEG_TO_RAD;
 
 int effective_radius = radius - LABEL_MARGIN;
 
-int x = CENTER_X + effective_radius * cos(angle_rad);
-int y = CENTER_Y + effective_radius * sin(angle_rad);
+int x = CENTER_X + (effective_radius-3) * cos(angle_rad);
+int y = CENTER_Y + (effective_radius-3) * sin(angle_rad);
 
-tft->drawLine(CENTER_X, CENTER_Y, x, y, color);
 tft->drawLine(CENTER_X, CENTER_Y, prev_x, prev_y, GC9A01A_BLACK);
+tft->drawLine(CENTER_X, CENTER_Y, x, y, color);
 
 tft->setCursor(CENTER_X,CENTER_Y);
 for( int i = ( effective_radius/RADAR_LINES ) ; i <= effective_radius; i += ( effective_radius/RADAR_LINES ) ) 
@@ -133,6 +134,52 @@ void DisplayManager::draw_pixel
 tft->drawPixel(x, y, color);
 }
 
+void DisplayManager::draw_label
+          (
+          int         x,
+          int         y,
+          const char* text,
+          uint16_t    color
+          )
+{
+  tft->setTextSize(1);
+  tft->setTextColor(color, GC9A01A_BLACK);
+  tft->setCursor(x, y);
+  tft->print(text);
+}
+
+void DisplayManager::draw_flight
+          (
+          int         x,
+          int         y,
+          const char* callsign,
+          uint16_t    color
+          )
+{
+  draw_pixel(x, y, color);
+
+  char label[4] = {'\0', '\0', '\0', '\0'};
+  int len = 0;
+  while (callsign[len] != '\0' && len < 8) {
+    len++;
+  }
+
+  int start = (len > 3) ? (len - 3) : 0;
+  int label_len = (len < 3) ? len : 3;
+  for (int i = 0; i < label_len; ++i) {
+    label[i] = callsign[start + i];
+  }
+  label[label_len] = '\0';
+
+  int label_x = x + 2;
+  int label_y = y - 2;
+  bool in_compass_zone = (label_x < 18) || (label_x > MAX_X - 24) || (label_y < 16) || (label_y > MAX_Y - 16);
+
+  if (label_len > 0 && !in_compass_zone) {
+    draw_label(label_x, label_y, label, color);
+  }
+}
+
 void DisplayManager::draw_orientation_labels()
 {
   auto bearingToLabel = [](int deg)->char {
@@ -148,24 +195,29 @@ void DisplayManager::draw_orientation_labels()
   char bottom = bearingToLabel(orientation + 180);
   char left = bearingToLabel(orientation + 270);
 
-  // clear small areas where labels will be drawn
-  tft->fillRect(CENTER_X-8, 0, 16, LABEL_MARGIN+1, GC9A01A_BLACK); // top
-  tft->fillRect(CENTER_X-8, MAX_Y-(LABEL_MARGIN+1), 16, LABEL_MARGIN+1, GC9A01A_BLACK); // bottom
-  tft->fillRect(0, CENTER_Y-8, LABEL_MARGIN+1, 16, GC9A01A_BLACK); // left
-  tft->fillRect(MAX_X-(LABEL_MARGIN+1), CENTER_Y-8, LABEL_MARGIN+1, 16, GC9A01A_BLACK); // right
-
   tft->setTextSize(1);
   tft->setTextColor(GC9A01A_WHITE);
 
   tft->setCursor(CENTER_X-6, 2);
   tft->print(top);
 
-  tft->setCursor(CENTER_X-6, MAX_Y-16);
+  tft->setCursor(CENTER_X-6, MAX_Y-10);
   tft->print(bottom);
 
   tft->setCursor(2, CENTER_Y-6);
   tft->print(left);
 
-  tft->setCursor(MAX_X-14, CENTER_Y-6);
+  tft->setCursor(MAX_X-8, CENTER_Y-6);
   tft->print(right);
+}
+
+void DisplayManager::setOrientation(int deg)
+{
+  orientation = deg;
+  draw_orientation_labels();
+}
+
+int DisplayManager::getOrientation()
+{
+  return orientation;
 }

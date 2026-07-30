@@ -12,7 +12,7 @@
 #define MAX_X 240
 #define MAX_Y 240
 #define RADIUS 120
-#define LABEL_MARGIN 15
+#define LABEL_MARGIN 10
 class DisplayManager {
 
 Adafruit_GC9A01A*   tft;
@@ -50,12 +50,15 @@ float do_radar_screen
                     uint16_t    color
                     );
 
+void draw_orientation_labels();
+
 void cls            (
 
                     )
 {
 
 tft->fillScreen(GC9A01A_BLACK);
+draw_orientation_labels();
 
 }
 
@@ -66,9 +69,24 @@ void draw_pixel
                     uint16_t    color
                     );
 
+void draw_label
+                    (
+                    int         x,
+                    int         y,
+                    const char* text,
+                    uint16_t    color
+                    );
+
+void draw_flight
+                    (
+                    int         x,
+                    int         y,
+                    const char* callsign,
+                    uint16_t color
+                    );
+
 void setOrientation(int deg);
 int getOrientation();
-void draw_orientation_labels();
 
 static DisplayManager* getInstance();
 
@@ -80,6 +98,7 @@ int     prev_x                  = 0;
 int     prev_y                  = 0;
 
 int     orientation             = 0; // degrees clockwise from North
+unsigned long last_label_millis = 0;
 
 char    loading_states[8]       = {'|'  , '/' , '-' , '\\'};
 int     loading_state_index     = 0;

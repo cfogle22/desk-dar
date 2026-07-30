@@ -34,6 +34,7 @@ FlightManager();
 ~FlightManager();
 
 void update_flights(WiFiClientSecure& wifi_client, float center_lat, float center_lon, float radius_km);
+void update_simulated_flights();
 
 String fetch_flight_data(WiFiClientSecure& wifi_client, float center_lat, float center_lon, float radius_km);
 
@@ -71,6 +72,7 @@ FlightMapper(DisplayManager* display_manager, FlightManager* flight_manager) : d
 
 private:
 
+std::list<Flight> previous_flights;
 
 };
 
