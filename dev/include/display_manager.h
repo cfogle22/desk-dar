@@ -51,6 +51,7 @@ float do_radar_screen
                     );
 
 void draw_orientation_labels();
+void draw_axes();
 
 void cls            (
 
@@ -83,6 +84,11 @@ void draw_flight
                     int         y,
                     const char* callsign,
                     uint16_t color
+                    );
+
+void persist_scope
+                    (
+
                     );
 
 void setOrientation(int deg);

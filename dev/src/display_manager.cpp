@@ -53,6 +53,7 @@ SPI.begin();
 tft->begin();
 tft->setRotation(0);
 draw_orientation_labels();
+draw_axes();
 
 }
 
@@ -94,15 +95,10 @@ int effective_radius = radius - LABEL_MARGIN;
 int x = CENTER_X + (effective_radius-3) * cos(angle_rad);
 int y = CENTER_Y + (effective_radius-3) * sin(angle_rad);
 
-tft->drawLine(CENTER_X, CENTER_Y, prev_x, prev_y, GC9A01A_BLACK);
-tft->drawLine(CENTER_X, CENTER_Y, x, y, color);
-
-tft->setCursor(CENTER_X,CENTER_Y);
-for( int i = ( effective_radius/RADAR_LINES ) ; i <= effective_radius; i += ( effective_radius/RADAR_LINES ) ) 
-{
-  //Draw radar circles everytime
-  tft->drawCircle(CENTER_X,CENTER_Y,i-1, color);
+if (prev_x != 0 || prev_y != 0) {
+  tft->drawLine(CENTER_X, CENTER_Y, prev_x, prev_y, GC9A01A_BLACK);
 }
+tft->drawLine(CENTER_X, CENTER_Y, x, y, color);
 
 draw_orientation_labels();
 
@@ -148,6 +144,16 @@ void DisplayManager::draw_label
   tft->print(text);
 }
 
+void DisplayManager::persist_scope()
+{
+
+int effective_radius = RADIUS - LABEL_MARGIN;
+for (int i = (effective_radius / RADAR_LINES); i <= effective_radius; i += (effective_radius / RADAR_LINES)) {
+  tft->drawCircle(CENTER_X, CENTER_Y, i - 1, GC9A01A_GREEN);
+}
+
+}
+
 void DisplayManager::draw_flight
           (
           int         x,
@@ -156,27 +162,22 @@ void DisplayManager::draw_flight
           uint16_t    color
           )
 {
-  draw_pixel(x, y, color);
-
-  char label[4] = {'\0', '\0', '\0', '\0'};
-  int len = 0;
-  while (callsign[len] != '\0' && len < 8) {
-    len++;
+  if (callsign == nullptr || callsign[0] == '\0') {
+    return;
   }
 
-  int start = (len > 3) ? (len - 3) : 0;
-  int label_len = (len < 3) ? len : 3;
-  for (int i = 0; i < label_len; ++i) {
-    label[i] = callsign[start + i];
-  }
-  label[label_len] = '\0';
+  persist_scope();
+  draw_axes();
 
-  int label_x = x + 2;
-  int label_y = y - 2;
+  uint16_t marker_color = (color == GC9A01A_BLACK) ? GC9A01A_BLACK : GC9A01A_RED;
+  tft->fillRect(x - 2, y - 2, 5, 5, marker_color);
+
+  int label_x = x + 3;
+  int label_y = y - 3;
   bool in_compass_zone = (label_x < 18) || (label_x > MAX_X - 24) || (label_y < 16) || (label_y > MAX_Y - 16);
 
-  if (label_len > 0 && !in_compass_zone) {
-    draw_label(label_x, label_y, label, color);
+  if (!in_compass_zone) {
+    draw_label(label_x, label_y, callsign, color);
   }
 }
 
@@ -204,11 +205,32 @@ void DisplayManager::draw_orientation_labels()
   tft->setCursor(CENTER_X-6, MAX_Y-10);
   tft->print(bottom);
 
-  tft->setCursor(2, CENTER_Y-6);
+  tft->setCursor(2, CENTER_Y-8);
   tft->print(left);
 
-  tft->setCursor(MAX_X-8, CENTER_Y-6);
+  tft->setCursor(MAX_X-8, CENTER_Y-8);
   tft->print(right);
+}
+
+void DisplayManager::draw_axes()
+{
+  tft->drawLine(0, CENTER_Y, MAX_X - 1, CENTER_Y, GC9A01A_GREEN);
+  tft->drawLine(CENTER_X, 0, CENTER_X, MAX_Y - 1, GC9A01A_GREEN);
+
+  int effective_radius = RADIUS - LABEL_MARGIN;
+  for (int miles = 5; miles <= 20; miles += 5) {
+    int pixel_radius = (int)((miles / 20.0f) * effective_radius);
+    int x = CENTER_X - pixel_radius;
+    int y = CENTER_Y;
+
+    char label[8];
+    sprintf(label, "%d", miles);
+
+    tft->setTextSize(1);
+    tft->setTextColor(GC9A01A_WHITE, GC9A01A_BLACK);
+    tft->setCursor(x - 10, y + 4);
+    tft->print(label);
+  }
 }
 
 void DisplayManager::setOrientation(int deg)

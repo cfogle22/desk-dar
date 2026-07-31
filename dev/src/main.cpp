@@ -127,7 +127,5 @@ void loop() {
     flight_manager.update_flights(network_manager.get_client(), center_lat, center_lon, RADIUS_KM);
   }
 #endif
-
   flight_mapper.map_flights();
-  delay(10);
 }

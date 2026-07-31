@@ -4,7 +4,7 @@
 
 float center_lat = 38.9138863;
 float center_lon = -94.7957893;
-float RADIUS_MILES = 50.0;
+float RADIUS_MILES = 20.0;
 float RADIUS_KM = RADIUS_MILES * 1.60934;
 
 FlightManager::FlightManager() 
@@ -88,6 +88,8 @@ http_client->begin(wifi_client, "https://opensky-network.org/api/states/all?lami
                                                                           "&lomin=" + String(min_lon) + 
                                                                           "&lamax=" + String(max_lat) + 
                                                                           "&lomax=" + String(max_lon));
+
+http_client->addHeader("Authorization", " " + String(""));
 int code = http_client->GET();
 if(code!=200)
 {
