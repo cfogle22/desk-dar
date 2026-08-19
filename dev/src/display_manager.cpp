@@ -86,26 +86,23 @@ float DisplayManager::do_radar_screen
                     )
 {
 
-int deg = millis() / 10 % 360;
+// int deg = millis() / 10 % 360;
 
-float angle_rad = deg * DEG_TO_RAD;
+// float angle_rad = deg * DEG_TO_RAD;
 
-int effective_radius = radius - LABEL_MARGIN;
+// int effective_radius = radius - LABEL_MARGIN;
 
-int x = CENTER_X + (effective_radius-3) * cos(angle_rad);
-int y = CENTER_Y + (effective_radius-3) * sin(angle_rad);
+// int x = CENTER_X + (effective_radius-3) * cos(angle_rad);
+// int y = CENTER_Y + (effective_radius-3) * sin(angle_rad);
 
-if (prev_x != 0 || prev_y != 0) {
-  tft->drawLine(CENTER_X, CENTER_Y, prev_x, prev_y, GC9A01A_BLACK);
-}
-tft->drawLine(CENTER_X, CENTER_Y, x, y, color);
+// if (prev_x != 0 || prev_y != 0) {
+//   tft->drawLine(CENTER_X, CENTER_Y, prev_x, prev_y, GC9A01A_BLACK);
+// }
+// tft->drawLine(CENTER_X, CENTER_Y, x, y, color);
 
 draw_orientation_labels();
 
-prev_x = x;
-prev_y = y;
-
-return deg;
+return 0;
 
 }
 

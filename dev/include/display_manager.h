@@ -83,7 +83,7 @@ void draw_flight
                     int         x,
                     int         y,
                     const char* callsign,
-                    uint16_t color
+                    uint16_t    color
                     );
 
 void persist_scope

@@ -56,7 +56,8 @@ void setup() {
   flight_manager.update_simulated_flights();
   flight_mapper.map_flights();
 #else
-  if(!network_manager.connect())
+bool network_connected = network_manager.connect();
+  if(!network_connected)
   {
     DEBUG("Failed to connect to WiFi, no saved network config?");
     DEBUG("Please set up the network config and try again");
@@ -82,7 +83,7 @@ void setup() {
   display_manager.cls();
 
   DEBUG("Attempting another WiFi connect");
-  if(!network_manager.connect())
+  if(!network_connected)
   {
     DEBUG("Failed to connect to WiFi with provided config");
     DEBUG("Please check the credentials and try again");
@@ -112,7 +113,7 @@ void setup() {
 }
 
 void loop() {
-  display_manager.do_radar_screen(RADIUS, GC9A01A_GREEN);
+  // display_manager.do_radar_screen(RADIUS, GC9A01A_GREEN);
 
 #if SIMULATE_FLIGHTS
   const unsigned long now = millis();
@@ -124,8 +125,10 @@ void loop() {
   if (flight_update_requested) {
     flight_update_requested = false;
     DEBUG("Updating flight data");
+    display_manager.persist_scope();
     flight_manager.update_flights(network_manager.get_client(), center_lat, center_lon, RADIUS_KM);
+    DEBUG("Flight data updated");
+    flight_mapper.map_flights();
   }
 #endif
-  flight_mapper.map_flights();
 }

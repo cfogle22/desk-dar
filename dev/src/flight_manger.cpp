@@ -83,13 +83,13 @@ String FlightManager::fetch_flight_data(WiFiClientSecure& wifi_client, float cen
 DEBUG("fetching ADS-B api");
 float min_lat, max_lat, min_lon, max_lon;
 calculate_bounding_box(center_lat, center_lon, radius_km, min_lat, max_lat, min_lon, max_lon);
+http_client->setAuthorization("carter_fogle", "Sticeg2022!");
 //The OpenSky Network, https://opensky-network.org
 http_client->begin(wifi_client, "https://opensky-network.org/api/states/all?lamin=" + String(min_lat) + 
                                                                           "&lomin=" + String(min_lon) + 
                                                                           "&lamax=" + String(max_lat) + 
                                                                           "&lomax=" + String(max_lon));
 
-http_client->addHeader("Authorization", " " + String(""));
 int code = http_client->GET();
 if(code!=200)
 {
