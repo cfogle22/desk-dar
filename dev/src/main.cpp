@@ -82,9 +82,9 @@ bool network_connected = network_manager.connect();
   }
   display_manager.cls();
 
-  DEBUG("Attempting another WiFi connect");
   if(!network_connected)
   {
+    DEBUG("Attempting another WiFi connect");
     DEBUG("Failed to connect to WiFi with provided config");
     DEBUG("Please check the credentials and try again");
     display_manager.print("Failed to connect to WiFi\n");
@@ -106,10 +106,10 @@ bool network_connected = network_manager.connect();
   timerAlarmWrite(flight_timer, 15000000, true);
   timerAlarmEnable(flight_timer);
 
-  flight_manager.update_flights(network_manager.get_client(), center_lat, center_lon, RADIUS_KM);
+  // flight_manager.update_flights(network_manager.get_client(), center_lat, center_lon, RADIUS_KM);
 #endif
 
-  flight_mapper.map_flights();
+  // flight_mapper.map_flights();
 }
 
 void loop() {

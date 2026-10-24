@@ -1,6 +1,7 @@
 #include "flight_manger.h"
 #include "utils.h"
 #include <string.h>
+#include <Arduino.h>
 
 float center_lat = 38.9138863;
 float center_lon = -94.7957893;
@@ -38,6 +39,9 @@ void FlightManager::update_flights(WiFiClientSecure& wifi_client, float center_l
         const char* callsign = plane[1];
         float planeLat = plane[6];
         float planeLon = plane[5];
+        float trueHeading = plane[10];
+        float baroAltitude = plane[7];
+        float geoAltitude = plane[13];
 
         // Check if the plane is within the specified radius
         float distance = sqrt(pow(planeLat - center_lat, 2) + pow(planeLon - center_lon, 2)) * 111; // Approximate conversion to km
@@ -45,8 +49,12 @@ void FlightManager::update_flights(WiFiClientSecure& wifi_client, float center_l
         {
             Flight flight;
             strncpy(flight.callsign, callsign ? callsign : "UNKNOWN", sizeof(flight.callsign) - 1);
+            flight.callsign[sizeof(flight.callsign) - 1] = '\0';
             flight.latitude = planeLat;
             flight.longitude = planeLon;
+            flight.true_heading = trueHeading;
+            flight.baro_altitude = baroAltitude;
+            flight.geo_altitude = geoAltitude;
             flights.push_back(flight);
         }
     }
@@ -73,6 +81,8 @@ void FlightManager::update_simulated_flights()
         flight.callsign[sizeof(flight.callsign) - 1] = '\0';
         flight.latitude = center_lat + lat_offset;
         flight.longitude = center_lon + lon_offset;
+        flight.true_heading = fmodf((angle * 180.0f / M_PI) + 360.0f, 360.0f);
+        flight.geo_altitude = 3000.0f + i * 500.0f;
         flights.push_back(flight);
     }
 }
@@ -93,12 +103,15 @@ http_client->begin(wifi_client, "https://opensky-network.org/api/states/all?lami
 int code = http_client->GET();
 if(code!=200)
 {
-  DEBUG("Failed to fetch data from ADS-B API");
-  DEBUG("HTTP code: " + String(code));
-  while(true);
+    Serial.println("Failed to fetch data from ADS-B API");
+    Serial.println(String("HTTP code: ") + String(code));
+    while(true);
 }
 
-return http_client->getString();
+String resp = http_client->getString();
+// Serial.println("ADS-B raw JSON payload:");
+// Serial.println(resp);
+return resp;
 
 }
 
@@ -151,7 +164,7 @@ void FlightMapper::map_flights()
                 float y = (old_flight.latitude - center_lat) * 111;
                 int screen_x = (int)(x / RADIUS_KM * 120 + 120);
                 int screen_y = (int)(120 - (y / RADIUS_KM * 120));
-                display_manager->draw_flight(screen_x, screen_y, old_flight.callsign, GC9A01A_BLACK);
+                display_manager->draw_flight(screen_x, screen_y, old_flight.callsign, old_flight.true_heading, old_flight.geo_altitude, GC9A01A_BLACK);
             }
         }
     }
@@ -162,7 +175,7 @@ void FlightMapper::map_flights()
         float y = (flight.latitude - center_lat) * 111; // Approximate conversion to km
         int screen_x = (int)(x / RADIUS_KM * 120 + 120); // Map to screen coordinates
         int screen_y = (int)(120 - (y / RADIUS_KM * 120)); // Invert Y so higher latitude maps toward the top of the display
-        display_manager->draw_flight(screen_x, screen_y, flight.callsign, GC9A01A_WHITE);
+        display_manager->draw_flight(screen_x, screen_y, flight.callsign, flight.true_heading, flight.geo_altitude, GC9A01A_WHITE);
     }
 
     previous_flights = flights;

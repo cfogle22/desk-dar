@@ -156,6 +156,8 @@ void DisplayManager::draw_flight
           int         x,
           int         y,
           const char* callsign,
+          float       heading,
+          float       altitude,
           uint16_t    color
           )
 {
@@ -167,15 +169,100 @@ void DisplayManager::draw_flight
   draw_axes();
 
   uint16_t marker_color = (color == GC9A01A_BLACK) ? GC9A01A_BLACK : GC9A01A_RED;
-  tft->fillRect(x - 2, y - 2, 5, 5, marker_color);
 
-  int label_x = x + 3;
-  int label_y = y - 3;
-  bool in_compass_zone = (label_x < 18) || (label_x > MAX_X - 24) || (label_y < 16) || (label_y > MAX_Y - 16);
+  // Triangle marker parameters
+  int size = 5; // smaller triangle
+  // Adjust heading by display orientation so marker points correctly
+  float display_heading = heading - orientation;
+  float rad = display_heading * DEG_TO_RAD;
 
-  if (!in_compass_zone) {
-    draw_label(label_x, label_y, callsign, color);
-  }
+  float nose_x = x + cos(rad) * size;
+  float nose_y = y - sin(rad) * size;
+
+  float base_angle = 120.0f * DEG_TO_RAD; // narrower base for a better-looking triangle
+  float base_dist = size * 0.8f;
+  float b1x = x + cos(rad + base_angle) * base_dist;
+  float b1y = y - sin(rad + base_angle) * base_dist;
+  float b2x = x + cos(rad - base_angle) * base_dist;
+  float b2y = y - sin(rad - base_angle) * base_dist;
+
+  tft->fillTriangle((int)nose_x, (int)nose_y, (int)b1x, (int)b1y, (int)b2x, (int)b2y, marker_color);
+  // draw an outline for clarity
+  tft->drawTriangle((int)nose_x, (int)nose_y, (int)b1x, (int)b1y, (int)b2x, (int)b2y, marker_color);
+
+  // Draw a small line extending from the nose
+  int line_len = 6; // shorter nose line
+  float nose2x = x + cos(rad) * (size + line_len);
+  float nose2y = y - sin(rad) * (size + line_len);
+  tft->drawLine((int)nose_x, (int)nose_y, (int)nose2x, (int)nose2y, (color == GC9A01A_BLACK) ? GC9A01A_BLACK : GC9A01A_RED);
+
+    // Prepare label lines
+    char line1[16];
+    char line2[24];
+    snprintf(line1, sizeof(line1), "%s", callsign);
+    if (altitude > 0.0f) {
+      snprintf(line2, sizeof(line2), "%.0ft", altitude * 3.28084f); // Convert meters to feet
+    } else {
+      snprintf(line2, sizeof(line2), "NO_ALT");
+    }
+
+    // Estimate text width (approx 6 pixels per char at textSize 1)
+    int max_len = max((int)strlen(line1), (int)strlen(line2));
+    int char_w = 6; // approximate
+    int label_w = min(120, max_len * char_w + 8);
+    int label_h = 8 * 2; // 2 lines of 8px
+
+      // Position label along the nose direction, offset to the right of heading
+      int along_dist = size + line_len + 2; // bring labels closer
+      float along_x = cos(rad) * along_dist;
+      float along_y = -sin(rad) * along_dist;
+      float perp_x = cos(rad + (M_PI / 2.0f)) * 4.0f; // smaller side offset
+      float perp_y = -sin(rad + (M_PI / 2.0f)) * 4.0f;
+
+    int label_x = (int)(x + along_x + perp_x);
+    int label_y = (int)(y + along_y + perp_y - (label_h / 2));
+
+    // If label would be off-screen, flip to the other side of the nose
+    if (label_x < 0 || label_x + label_w > MAX_X) {
+      // flip to left side
+      label_x = (int)(x + along_x - perp_x - label_w);
+    }
+    if (label_y < 0) label_y = 2;
+    if (label_y + label_h > MAX_Y) label_y = MAX_Y - label_h - 2;
+
+    // If label intersects triangle bounding box, push it further out
+    int tri_min_x = (int)min(nose_x, min(b1x, b2x));
+    int tri_max_x = (int)max(nose_x, max(b1x, b2x));
+    int tri_min_y = (int)min(nose_y, min(b1y, b2y));
+    int tri_max_y = (int)max(nose_y, max(b1y, b2y));
+
+    auto rects_intersect = [&](int rx, int ry, int rw, int rh){
+      return !(rx + rw < tri_min_x || rx > tri_max_x || ry + rh < tri_min_y || ry > tri_max_y);
+    };
+
+    if (rects_intersect(label_x - 2, label_y - 2, label_w + 4, label_h + 4)) {
+      // move label slightly further along the nose direction to avoid overlapping
+      int push = 12; // fixed small push
+      label_x += (int)(cos(rad) * push);
+      label_y += (int)(-sin(rad) * push);
+      // if still off-screen, flip side
+      if (label_x < 0 || label_x + label_w > MAX_X) {
+        label_x = (int)(x + along_x - perp_x - label_w);
+      }
+    }
+
+    // Background for label
+    tft->fillRect(label_x - 2, label_y - 2, label_w + 4, label_h + 4, GC9A01A_BLACK);
+
+    tft->setTextSize(1);
+    // print callsign in provided color
+    tft->setTextColor(color, GC9A01A_BLACK);
+    tft->setCursor(label_x, label_y);
+    tft->print(line1);
+    // print altitude in yellow
+    tft->setTextColor(GC9A01A_YELLOW, GC9A01A_BLACK);
+    tft->setCursor(label_x, label_y + 8);
+    tft->print(line2);
 }
 
 void DisplayManager::draw_orientation_labels()

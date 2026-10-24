@@ -83,6 +83,8 @@ void draw_flight
                     int         x,
                     int         y,
                     const char* callsign,
+                    float       heading,
+                    float       altitude,
                     uint16_t    color
                     );
 

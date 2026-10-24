@@ -20,6 +20,9 @@ typedef struct {
     char callsign[9];
     float latitude;
     float longitude;
+    float true_heading;
+    float baro_altitude;
+    float geo_altitude;
 } Flight;
 
 class FlightManager 
