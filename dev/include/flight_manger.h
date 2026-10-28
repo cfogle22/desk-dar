@@ -36,7 +36,7 @@ std::list<Flight> flights;
 FlightManager();
 ~FlightManager();
 
-void update_flights(WiFiClientSecure& wifi_client, float center_lat, float center_lon, float radius_km);
+bool update_flights(WiFiClientSecure& wifi_client, float center_lat, float center_lon, float radius_km);
 void update_simulated_flights();
 
 String fetch_flight_data(WiFiClientSecure& wifi_client, float center_lat, float center_lon, float radius_km);
@@ -44,6 +44,15 @@ String fetch_flight_data(WiFiClientSecure& wifi_client, float center_lat, float 
 std::list<Flight> get_flights();
 
     private:
+
+String access_token;
+unsigned long token_fetched_at = 0;
+unsigned long token_lifetime_ms = 0;
+bool token_valid = false;
+
+bool ensure_access_token(WiFiClientSecure& wifi_client);
+String url_encode(const String& value);
+
 void calculate_bounding_box(float center_lat, float center_lon, float radius_km, float& min_lat, float& max_lat, float& min_lon, float& max_lon) 
 {
 
@@ -72,10 +81,6 @@ void map_flights();
 
 FlightMapper(DisplayManager* display_manager, FlightManager* flight_manager) : display_manager(display_manager), flight_manager(flight_manager) {}
 ~FlightMapper() {display_manager = nullptr; flight_manager = nullptr;}
-
-private:
-
-std::list<Flight> previous_flights;
 
 };
 

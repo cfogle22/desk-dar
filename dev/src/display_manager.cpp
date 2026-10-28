@@ -16,13 +16,19 @@ DisplayManager::DisplayManager
                         (
                         int         tft_cs,
                         int         tft_dc,
-                        int         tft_rst
+                        int         tft_rst,
+                        int         tft_sck,
+                        int         tft_miso,
+                        int         tft_mosi
                         )
 {
 
 TFT_CS = tft_cs;
 TFT_DC = tft_dc;
 TFT_RST = tft_rst;
+TFT_SCK = tft_sck;
+TFT_MISO = tft_miso;
+TFT_MOSI = tft_mosi;
 tft = new Adafruit_GC9A01A(TFT_CS, TFT_DC, TFT_RST);
 
 DisplayManager::instance = this;
@@ -49,34 +55,83 @@ void DisplayManager::begin
                         )
 {
 
-SPI.begin();
+SPI.begin(TFT_SCK, TFT_MISO, TFT_MOSI, TFT_CS);
 tft->begin();
 tft->setRotation(0);
-draw_orientation_labels();
-draw_axes();
+tft->fillScreen(GC9A01A_BLACK);
+startup_active = true;
+startup_animation();
 
+}
+
+void DisplayManager::finish_startup()
+{
+  startup_active = false;
+  startup_logo_drawn = false;
+  tft->fillScreen(GC9A01A_BLACK);
+  draw_orientation_labels();
+  persist_scope();
+  draw_axes();
+}
+
+void DisplayManager::startup_animation(
+                                      )
+{
+  if (startup_logo_drawn) {
+    return;
+  }
+
+  const int fade_steps = 24;
+  const int center_y = 94;
+  const uint16_t cyan = tft->color565(0, 220, 255);
+  const uint16_t green = tft->color565(0, 220, 110);
+  const uint16_t dim_green = tft->color565(0, 85, 48);
+  const uint16_t white = tft->color565(230, 245, 255);
+
+  auto fade_color = [](uint16_t color, int step, int steps) -> uint16_t {
+    uint16_t red = ((color >> 11) & 0x1F) * step / steps;
+    uint16_t green = ((color >> 5) & 0x3F) * step / steps;
+    uint16_t blue = (color & 0x1F) * step / steps;
+    return (red << 11) | (green << 5) | blue;
+  };
+
+  for (int step = 1; step <= fade_steps; ++step) {
+    tft->fillScreen(GC9A01A_BLACK);
+
+    tft->drawCircle(CENTER_X, center_y, 54, fade_color(dim_green, step, fade_steps));
+    tft->drawCircle(CENTER_X, center_y, 39, fade_color(dim_green, step, fade_steps));
+    tft->drawCircle(CENTER_X, center_y, 23, fade_color(green, step, fade_steps));
+    tft->drawLine(CENTER_X - 54, center_y, CENTER_X + 54, center_y, fade_color(dim_green, step, fade_steps));
+    tft->drawLine(CENTER_X, center_y - 54, CENTER_X, center_y + 54, fade_color(dim_green, step, fade_steps));
+    tft->drawLine(CENTER_X, center_y, CENTER_X + 37, center_y - 37, fade_color(cyan, step, fade_steps));
+    tft->fillCircle(CENTER_X + 17, center_y - 18, 3, fade_color(cyan, step, fade_steps));
+    tft->fillCircle(CENTER_X - 28, center_y + 12, 2, fade_color(green, step, fade_steps));
+    tft->fillCircle(CENTER_X + 5, center_y + 38, 2, fade_color(green, step, fade_steps));
+
+    tft->setTextSize(2);
+    tft->setTextColor(fade_color(white, step, fade_steps));
+    tft->setCursor(CENTER_X - 42, 164);
+    tft->print("DESKDAR");
+    tft->setTextSize(1);
+    tft->setTextColor(fade_color(cyan, step, fade_steps));
+    tft->setCursor(CENTER_X - 42, 187);
+    tft->print("AIRSPACE RADAR");
+
+    delay(25);
+  }
+
+  startup_logo_drawn = true;
 }
 
 void DisplayManager::initializing_display
                         (
 
-                        ) 
+                        )
 {
 
-tft->setTextColor(GC9A01A_WHITE);
-tft->setTextSize(2);
-tft->setCursor(CENTER_X-100, CENTER_Y);
-tft->print("Initializing  ");
-
-// Clear the spinner character area
-tft->fillRect(CENTER_X+50, CENTER_Y, 12, 20, GC9A01A_BLACK);
-
-// Draw the spinner character
-tft->setCursor(CENTER_X+50, CENTER_Y);
-tft->setTextColor(GC9A01A_WHITE);
-tft->print(loading_states[loading_state_index]);
-
-loading_state_index = (loading_state_index + 1) % 4;
+  if (startup_active) {
+    startup_animation();
+  }
 }
 
 float DisplayManager::do_radar_screen
@@ -112,6 +167,7 @@ void DisplayManager::print
                     )
 {
 
+if (startup_active) return;
 tft->setTextColor(GC9A01A_WHITE);
 tft->print(text);
 
@@ -165,52 +221,65 @@ void DisplayManager::draw_flight
     return;
   }
 
-  persist_scope();
-  draw_axes();
-
   uint16_t marker_color = (color == GC9A01A_BLACK) ? GC9A01A_BLACK : GC9A01A_RED;
+  bool heading_valid = isfinite(heading) && heading >= 0.0f && heading <= 360.0f;
 
-  // Triangle marker parameters
+  // Unknown headings use a circle marker and a neutral label direction.
   int size = 5; // smaller triangle
-  // Adjust heading by display orientation so marker points correctly
-  float display_heading = heading - orientation;
-  float rad = display_heading * DEG_TO_RAD;
-
-  float nose_x = x + cos(rad) * size;
-  float nose_y = y - sin(rad) * size;
-
-  float base_angle = 120.0f * DEG_TO_RAD; // narrower base for a better-looking triangle
-  float base_dist = size * 0.8f;
-  float b1x = x + cos(rad + base_angle) * base_dist;
-  float b1y = y - sin(rad + base_angle) * base_dist;
-  float b2x = x + cos(rad - base_angle) * base_dist;
-  float b2y = y - sin(rad - base_angle) * base_dist;
-
-  tft->fillTriangle((int)nose_x, (int)nose_y, (int)b1x, (int)b1y, (int)b2x, (int)b2y, marker_color);
-  // draw an outline for clarity
-  tft->drawTriangle((int)nose_x, (int)nose_y, (int)b1x, (int)b1y, (int)b2x, (int)b2y, marker_color);
-
-  // Draw a small line extending from the nose
+  float rad = 0.0f;
+  float nose_x = x + size;
+  float nose_y = y;
+  float b1x = x - size;
+  float b1y = y - size;
+  float b2x = x - size;
+  float b2y = y + size;
   int line_len = 6; // shorter nose line
-  float nose2x = x + cos(rad) * (size + line_len);
-  float nose2y = y - sin(rad) * (size + line_len);
-  tft->drawLine((int)nose_x, (int)nose_y, (int)nose2x, (int)nose2y, (color == GC9A01A_BLACK) ? GC9A01A_BLACK : GC9A01A_RED);
+
+  if (heading_valid) {
+    // OpenSky headings are clockwise from north; convert to screen coordinates.
+    float display_heading = heading - orientation;
+    rad = (90.0f - display_heading) * DEG_TO_RAD;
+
+    nose_x = x + cos(rad) * size;
+    nose_y = y - sin(rad) * size;
+
+    float base_angle = 120.0f * DEG_TO_RAD;
+    float base_dist = size * 0.8f;
+    b1x = x + cos(rad + base_angle) * base_dist;
+    b1y = y - sin(rad + base_angle) * base_dist;
+    b2x = x + cos(rad - base_angle) * base_dist;
+    b2y = y - sin(rad - base_angle) * base_dist;
+
+    tft->fillTriangle((int)nose_x, (int)nose_y, (int)b1x, (int)b1y, (int)b2x, (int)b2y, marker_color);
+    tft->drawTriangle((int)nose_x, (int)nose_y, (int)b1x, (int)b1y, (int)b2x, (int)b2y, marker_color);
+
+    float nose2x = x + cos(rad) * (size + line_len);
+    float nose2y = y - sin(rad) * (size + line_len);
+    tft->drawLine((int)nose_x, (int)nose_y, (int)nose2x, (int)nose2y, marker_color);
+  } else {
+    tft->fillCircle(x, y, size - 1, marker_color);
+    tft->drawCircle(x, y, size, marker_color);
+  }
 
     // Prepare label lines
     char line1[16];
     char line2[24];
     snprintf(line1, sizeof(line1), "%s", callsign);
+    size_t callsign_length = strlen(line1);
+    while (callsign_length > 0 && line1[callsign_length - 1] == ' ') {
+      line1[--callsign_length] = '\0';
+    }
     if (altitude > 0.0f) {
       snprintf(line2, sizeof(line2), "%.0ft", altitude * 3.28084f); // Convert meters to feet
     } else {
       snprintf(line2, sizeof(line2), "NO_ALT");
     }
 
-    // Estimate text width (approx 6 pixels per char at textSize 1)
+    // The default font advances 6 pixels per character at textSize 1.
     int max_len = max((int)strlen(line1), (int)strlen(line2));
-    int char_w = 6; // approximate
-    int label_w = min(120, max_len * char_w + 8);
+    int label_w = max_len * 6;
     int label_h = 8 * 2; // 2 lines of 8px
+    const int label_padding = 2;
 
       // Position label along the nose direction, offset to the right of heading
       int along_dist = size + line_len + 2; // bring labels closer
@@ -223,12 +292,12 @@ void DisplayManager::draw_flight
     int label_y = (int)(y + along_y + perp_y - (label_h / 2));
 
     // If label would be off-screen, flip to the other side of the nose
-    if (label_x < 0 || label_x + label_w > MAX_X) {
+    if (label_x - label_padding < 0 || label_x + label_w + label_padding > MAX_X) {
       // flip to left side
       label_x = (int)(x + along_x - perp_x - label_w);
     }
-    if (label_y < 0) label_y = 2;
-    if (label_y + label_h > MAX_Y) label_y = MAX_Y - label_h - 2;
+    label_x = constrain(label_x, label_padding, MAX_X - label_w - label_padding);
+    label_y = constrain(label_y, label_padding, MAX_Y - label_h - label_padding);
 
     // If label intersects triangle bounding box, push it further out
     int tri_min_x = (int)min(nose_x, min(b1x, b2x));
@@ -240,27 +309,29 @@ void DisplayManager::draw_flight
       return !(rx + rw < tri_min_x || rx > tri_max_x || ry + rh < tri_min_y || ry > tri_max_y);
     };
 
-    if (rects_intersect(label_x - 2, label_y - 2, label_w + 4, label_h + 4)) {
+    if (rects_intersect(label_x - label_padding, label_y - label_padding, label_w + label_padding * 2, label_h + label_padding * 2)) {
       // move label slightly further along the nose direction to avoid overlapping
       int push = 12; // fixed small push
       label_x += (int)(cos(rad) * push);
       label_y += (int)(-sin(rad) * push);
       // if still off-screen, flip side
-      if (label_x < 0 || label_x + label_w > MAX_X) {
+      if (label_x - label_padding < 0 || label_x + label_w + label_padding > MAX_X) {
         label_x = (int)(x + along_x - perp_x - label_w);
       }
+      label_x = constrain(label_x, label_padding, MAX_X - label_w - label_padding);
+      label_y = constrain(label_y, label_padding, MAX_Y - label_h - label_padding);
     }
 
     // Background for label
-    tft->fillRect(label_x - 2, label_y - 2, label_w + 4, label_h + 4, GC9A01A_BLACK);
+    tft->fillRect(label_x - label_padding, label_y - label_padding, label_w + label_padding * 2, label_h + label_padding * 2, GC9A01A_BLACK);
 
     tft->setTextSize(1);
     // print callsign in provided color
     tft->setTextColor(color, GC9A01A_BLACK);
     tft->setCursor(label_x, label_y);
     tft->print(line1);
-    // print altitude in yellow
-    tft->setTextColor(GC9A01A_YELLOW, GC9A01A_BLACK);
+    // print altitude in cyan
+    tft->setTextColor(GC9A01A_CYAN, GC9A01A_BLACK);
     tft->setCursor(label_x, label_y + 8);
     tft->print(line2);
 }

@@ -20,6 +20,9 @@ Adafruit_GC9A01A*   tft;
 int TFT_CS;
 int TFT_DC;  
 int TFT_RST;
+int TFT_SCK;
+int TFT_MISO;
+int TFT_MOSI;
 
     public:
 
@@ -27,12 +30,16 @@ DisplayManager
                     ( 
                     int         tft_cs,
                     int         tft_dc,
-                    int         tft_rst
+                    int         tft_rst,
+                    int         tft_sck,
+                    int         tft_miso,
+                    int         tft_mosi
                     );
 
 ~DisplayManager();
 
 void begin();
+void finish_startup();
 
 void initializing_display
                     (
@@ -58,6 +65,7 @@ void cls            (
                     )
 {
 
+if (startup_active) return;
 tft->fillScreen(GC9A01A_BLACK);
 draw_orientation_labels();
 
@@ -102,11 +110,17 @@ static DisplayManager* instance;
 
     private:
 
+void startup_animation
+                    (
+                    );
+
 int     prev_x                  = 0;
 int     prev_y                  = 0;
 
 int     orientation             = 0; // degrees clockwise from North
 unsigned long last_label_millis = 0;
+bool    startup_active          = false;
+bool    startup_logo_drawn      = false;
 
 char    loading_states[8]       = {'|'  , '/' , '-' , '\\'};
 int     loading_state_index     = 0;

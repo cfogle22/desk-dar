@@ -1,5 +1,6 @@
 #include "network_manager.h"
 #include "display_manager.h"
+#include "configuration.h"
 
 NetworkManager::NetworkManager
                                 (
@@ -134,6 +135,13 @@ String password = prefs.getString("password", "");
 
 prefs.end();
 
+bool use_configured_network = ssid.isEmpty() && WIFI_SSID[0] != '\0';
+if (use_configured_network)
+{
+    ssid = WIFI_SSID;
+    password = WIFI_PASSWORD;
+}
+
 strncpy(config.ssid,
         ssid.c_str(),
         sizeof(config.ssid) - 1);
@@ -144,6 +152,11 @@ strncpy(config.password,
 
 config.ssid[sizeof(config.ssid) - 1] = '\0';
 config.password[sizeof(config.password) - 1] = '\0';
+
+if (use_configured_network)
+{
+    dynamic_network_config(config);
+}
 
 return config;
 
